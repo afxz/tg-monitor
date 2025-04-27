@@ -9,9 +9,12 @@ from flask import Flask
 from threading import Thread
 import pytz
 from datetime import datetime
+from config import load_env_variables
+from telegram_client import client, monitor_target_status, send_scheduled_messages
+from flask_server import keep_alive
 
 # Load environment variables
-load_dotenv()
+load_env_variables()
 
 # Configs
 api_id = int(os.getenv('API_ID'))
@@ -24,56 +27,10 @@ INDIA_TZ = pytz.timezone('Asia/Kolkata')
 MORNING_HOUR = 7  # 7 AM IST
 NIGHT_HOUR = 22   # 10 PM IST
 
-# Message Templates
-motivational_messages = [
-    "🌅 Rise and shine! Today is a new beginning! ✨",
-    "🎯 You've got this! Make today amazing! 💪",
-    "🌟 Every day is a fresh start! Believe in yourself! ⭐",
-    "🚀 Dream big, work hard, stay focused! 💫",
-    "🌈 Your potential is limitless! Keep going! 🔥",
-    "🎨 Create the life you dream about! ✨",
-    "🌞 Today's a gift, that's why it's called present! 🎁"
-]
-
-goodnight_messages = [
-    "🌙 Sweet dreams! Rest well for another amazing day! ✨",
-    "🌟 Time to recharge for tomorrow's adventures! 💫",
-    "🌃 Wishing you a peaceful night's sleep! 😴",
-    "✨ Good night! Let your dreams take flight! 🦋",
-    "🌠 Sleep tight! Tomorrow will be bright! 💫",
-    "🌜 Rest well and dream big! ⭐",
-    "🎆 Another day well spent! Sweet dreams! 💤"
-]
-
-online_messages = [
-    "✅ 💎 User is now online!",
-    "🌟 Heads up everyone, User just appeared!",
-    "🎉 Party time, User is online!",
-    "🪩 User is shining online right now!",
-    "💬 User is here to vibe!",
-]
-
-offline_messages = [
-    "❌ 💎 User went offline after {duration}. See you soon!",
-    "🌙 User left after {duration}. Take Care!",
-    "👋 User logged off after {duration}. Catch you later!",
-    "✨ User was online for {duration}. Good times!",
-    "📴 User logged out after {duration}.",
-    "🌟 User's vibe is on pause after {duration}.",
-]
-
 # Initialize logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# Initialize Telegram Client with safety settings
-client = TelegramClient('userbot_session', api_id, api_hash, 
-    device_model="Pixel 7",  # Use common device name
-    system_version="Android 13",
-    app_version="9.6.3",  # Use stable Telegram version
-    flood_sleep_threshold=60  # Pause on flood wait
-)
 
 # Add delays to prevent spam detection
 MESSAGE_DELAY = 3  # Seconds between messages
@@ -128,48 +85,6 @@ async def format_last_seen(last_seen_date):
     return "unknown"
 
 
-async def monitor_target_status():
-    global was_online, online_time
-
-    # Initial target user lookup
-    try:
-        target_user = await client.get_entity(TARGET_USERNAME)
-        logger.info(f"Found target user: @{TARGET_USERNAME}")
-    except ValueError as e:
-        logger.error(
-            f"Could not find user @{TARGET_USERNAME}. Please check if the username is correct."
-        )
-        return
-
-    while True:
-        try:
-            # Get fresh status
-            target_user = await client.get_entity(target_user)
-            current_status = target_user.status
-
-            # Only track target's status changes
-            if isinstance(current_status,
-                          types.UserStatusOnline) and not was_online:
-                was_online = True
-                online_time = time.time()
-                msg = random.choice(online_messages)
-                await safe_send_message(msg)
-                logger.info(f"Target status update: {msg}")
-
-            elif not isinstance(current_status,
-                                types.UserStatusOnline) and was_online:
-                was_online = False
-                duration = format_duration(time.time() - online_time)
-                msg = random.choice(offline_messages).format(duration=duration)
-                await safe_send_message(msg)
-                logger.info(f"Target status update: {msg}")
-
-        except Exception as e:
-            logger.error(f"Error monitoring target status: {e}")
-
-        await asyncio.sleep(5)
-
-
 async def safe_send_message(message):
     global last_message_time, message_count
     
@@ -197,30 +112,6 @@ async def safe_send_message(message):
     except Exception as e:
         logger.error(f"Error sending message: {e}")
         await asyncio.sleep(FLOOD_WAIT_DELAY)
-
-async def send_scheduled_messages():
-    while True:
-        try:
-            # Get current time in IST
-            now = datetime.now(INDIA_TZ)
-            current_hour = now.hour
-
-            # Send morning motivation
-            if current_hour == MORNING_HOUR and now.minute == 0:
-                msg = random.choice(motivational_messages)
-                await safe_send_message(msg)
-
-            # Send good night
-            if current_hour == NIGHT_HOUR and now.minute == 0:
-                msg = random.choice(goodnight_messages)
-                await safe_send_message(msg)
-
-            # Wait for next minute
-            await asyncio.sleep(60)
-
-        except Exception as e:
-            logger.error(f"Error sending scheduled message: {e}")
-            await asyncio.sleep(60)
 
 async def main():
     await client.start()

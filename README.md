@@ -1,4 +1,3 @@
-
 # 🤖 Telegram Status Monitor Bot
 
 A Telegram userbot that monitors online/offline status of a target account and sends scheduled motivational messages.
@@ -38,8 +37,8 @@ The bot will start monitoring the specified target account and send status updat
 
 ## ⚙️ Configuration
 
-- Target username can be modified in `main.py`
-- Message templates can be customized in the code
+- Target username can be modified in `config.py`
+- Message templates can be customized in `message_templates.py`
 - Scheduling times can be adjusted (default: 7 AM and 10 PM IST)
 
 ## 🔐 Safety Features
@@ -48,6 +47,26 @@ The bot will start monitoring the specified target account and send status updat
 - Flood protection
 - Proper device identification
 - Error handling with automatic cooldown
+
+## 🌍 Deployment on Koyeb
+
+You can deploy this bot on Koyeb for free to keep it running 24/7.
+
+### Steps to Deploy:
+
+1. **Create a Koyeb Account**: Sign up at [Koyeb](https://www.koyeb.com/).
+2. **Create a New App**:
+   - Select "Deploy from GitHub" and connect your repository.
+   - Choose this repository and branch.
+3. **Set Environment Variables**:
+   - Add the following environment variables in the Koyeb dashboard:
+     - `API_ID`
+     - `API_HASH`
+     - `CHANNEL_ID`
+4. **Select Runtime**:
+   - Use the Python runtime.
+5. **Start the App**:
+   - Deploy the app and monitor logs to ensure it starts successfully.
 
 ## 📝 License
 
